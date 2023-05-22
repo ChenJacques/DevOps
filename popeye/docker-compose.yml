@@ -1,0 +1,66 @@
+version: "3.9"
+services:
+
+  poll:
+    build: ./poll
+    restart: always
+    ports:
+      - "5000:80"
+    networks:
+      - poll-tier
+
+  redis:
+    image: "redis:latest"
+    depends_on:
+      - db
+    restart: always
+    expose:
+      - "6379"
+    networks:
+      - poll-tier
+      - back-tier
+
+  worker:
+    build: ./worker
+    depends_on:
+      - db
+    restart: always
+    networks:
+      - back-tier
+  
+  db:
+    image: "postgres:latest"
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    networks:
+      - result-tier
+      - back-tier
+    volumes:
+      - db-data:/home
+      
+  result:
+    build: ./result
+    depends_on:
+      - db
+    restart: always
+    command: 'npm install'
+    ports:
+      - "5001:80"
+    networks:
+      - result-tier
+
+volumes:
+  db-data:
+    driver: local
+
+
+
+networks:
+  poll-tier:
+    driver: bridge
+  result-tier:
+    driver: bridge
+  back-tier:
+    driver: bridge
